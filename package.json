@@ -1,0 +1,17 @@
+{
+  "name": "critical-css-generator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node generateCriticalCSS.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "env": "0.0.2",
+    "puppeteer": "^21.2.1"
+  }
+}
