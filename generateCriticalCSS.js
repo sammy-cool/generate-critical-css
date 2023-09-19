@@ -1,48 +1,49 @@
-const puppeteer = require('puppeteer');
+import { generate } from 'critical';
+import { writeFileSync } from 'fs';
+import csso from 'csso';
+import readline from 'readline';
 
-async function generateCriticalCSS(url, viewportWidth, outputPath) {
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-
-  // Set the viewport size
-  await page.setViewport({
-    width: viewportWidth,
-    height: 800, // Adjust the height as needed
-  });
-
-  // Navigate to the URL
-  await page.goto(url, { waitUntil: 'networkidle0' });
-
-  // Generate critical CSS
-  const criticalCSS = await page.evaluate(() => {
-    const styleTags = document.querySelectorAll('style,link[rel="stylesheet"]');
-    let criticalStyles = '';
-
-    styleTags.forEach((tag) => {
-      if (tag.getAttribute('data-critical')) {
-        criticalStyles += tag.innerHTML;
-      }
+const generateCriticalCSS = async (url, outputPath) => {
+  try {
+    const { css } = await generate({
+      inline: false,
+      src: url,
+      width: 1200,
+      height: 900,
     });
 
-    return criticalStyles;
-  });
+    const optimizedCSS = await csso.minify(css, {
+      restructure: true,
+      comments: false,
+      forceMediaMerge: true,
+      forcePropertiesSorting: true,
+      compatibility: 'ie9',
+    });
 
-  // Save the critical CSS to a file
-  const fs = require('fs');
-  fs.writeFileSync(outputPath, criticalCSS);
+    const minifiedCSS = await csso.minify(optimizedCSS.css);
 
-  await browser.close();
-}
-
-// Usage example
-const url = process.env.INPUT_URL; // Replace with your target URL
-const viewportWidth = 1200; // Set the viewport width
-const outputPath = 'critical.css'; // Output file path
-
-generateCriticalCSS(url, viewportWidth, outputPath)
-  .then(() => {
+    writeFileSync(outputPath, minifiedCSS.css);
     console.log(`Critical CSS generated and saved to ${outputPath}`);
-  })
-  .catch((error) => {
+  } catch (error) {
     console.error('Error generating critical CSS:', error);
+  }
+
+  process.exit();
+};
+
+const url = process.argv[2];
+const outputPath = 'critical.css';
+
+if (url) {
+  generateCriticalCSS(url, outputPath);
+} else {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
   });
+
+  rl.question('Enter the complete URL "example: https://www.example.com" ', (userInput) => {
+    rl.close();
+    generateCriticalCSS(userInput, outputPath);
+  });
+}
